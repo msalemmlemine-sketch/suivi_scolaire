@@ -99,7 +99,7 @@ class FollowupRepository {
     final assessment = assessmentRows.single;
     final enrollmentRows = await _db.query(
       'enrollments', columns: ['id'],
-      where: 'id=? AND class_id=? AND start_date<=? AND (end_date IS NULL OR end_date>=?)',
+      where: 'id=? AND class_id=? AND (date(start_date)<=date(?) OR end_date IS NULL) AND (end_date IS NULL OR date(end_date)>=date(?))',
       whereArgs: [enrollmentId, classId, assessment['assessment_date'], assessment['assessment_date']], limit: 1,
     );
     if (enrollmentRows.isEmpty) throw StateError('enrollment_not_in_class_on_assessment_date');

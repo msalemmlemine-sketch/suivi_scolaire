@@ -163,7 +163,7 @@ class TimetableRepository {
       FROM enrollments e JOIN students s ON s.id=e.student_id
       LEFT JOIN attendance_records ar ON ar.enrollment_id=e.id AND ar.lesson_session_id=?
       LEFT JOIN attendance_statuses ast ON ast.code=ar.status_code
-      WHERE e.class_id=? AND date(e.start_date) <= date(?) AND (e.end_date IS NULL OR date(e.end_date) >= date(?))
+      WHERE e.class_id=? AND (date(e.start_date) <= date(?) OR e.end_date IS NULL) AND (e.end_date IS NULL OR date(e.end_date) >= date(?))
       ORDER BY COALESCE(NULLIF(s.family_name_fr,''),NULLIF(s.full_name_ar,''),s.full_name_original),s.given_name_fr
     ''', [sessionId, session['class_id'], session['session_date'], session['session_date']]);
   }
