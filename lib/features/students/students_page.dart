@@ -283,7 +283,8 @@ class _StudentsPageState extends State<StudentsPage> {
   Widget _instPicker() => Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
         child: DropdownButtonFormField<int>(
-          value: _instId,
+          key: ValueKey('inst-$_instId-$_yearName'),
+          initialValue: _instId,
           isExpanded: true,
           decoration: InputDecoration(
             labelText: _yearName.isEmpty ? s.t('institution') : '${s.t('institution')} · ${s.t('year_prefix')} $_yearName',
@@ -347,7 +348,7 @@ class _StudentFormState extends State<_StudentForm> {
             guardianName: _gName.text,
             guardianPhone: _gPhone.text);
       } else {
-        await widget.repo.update(_st!.id,
+        await widget.repo.update(_st.id,
             matricule: _mat.text,
             familyNameFr: _family.text,
             givenNameFr: _given.text,
@@ -386,7 +387,7 @@ class _StudentFormState extends State<_StudentForm> {
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: DropdownButtonFormField<int>(
-                value: _classId,
+                initialValue: _classId,
                 isExpanded: true,
                 decoration: InputDecoration(labelText: s.t('class_label')),
                 items: [for (final c in widget.classes) DropdownMenuItem(value: c.id, child: Text(c.displayName(s.isAr)))],
@@ -517,7 +518,7 @@ class _TransferSheetState extends State<_TransferSheet> {
         Text(s.t('transfer_to'), style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
         DropdownButtonFormField<int>(
-          value: _instId,
+          initialValue: _instId,
           isExpanded: true,
           decoration: InputDecoration(labelText: s.t('institution')),
           items: [
@@ -528,7 +529,8 @@ class _TransferSheetState extends State<_TransferSheet> {
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<int>(
-          value: _classId,
+          key: ValueKey('cls-$_instId'),
+          initialValue: _classId,
           isExpanded: true,
           decoration: InputDecoration(labelText: s.t('class_label')),
           items: [for (final c in _classes) DropdownMenuItem(value: c.id, child: Text(c.displayName(s.isAr)))],
