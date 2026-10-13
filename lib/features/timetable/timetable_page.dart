@@ -279,7 +279,7 @@ class _SessionsTabState extends State<_SessionsTab> {
         const SizedBox(height: 8),
         ListTile(contentPadding: EdgeInsets.zero, title: Text(widget.s.t('session_date')), subtitle: Text(date), trailing: const Icon(Icons.calendar_month), onTap: () async { final now = DateTime.tryParse(date) ?? DateTime.now(); final picked = await showDatePicker(context: context, initialDate: now, firstDate: DateTime(2000), lastDate: DateTime(2100)); if (picked != null) setDialog(() => date = picked.toIso8601String().substring(0, 10)); }),
       ]),
-      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(widget.s.t('cancel'))), FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(widget.s.t('save'))],
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(widget.s.t('cancel'))), FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(widget.s.t('save')))],
     )));
     if (ok != true) return;
     try { await widget.repo.createSessionFromEntry(timetableEntryId: entryId, date: date); if (mounted) setState(_reload); }
@@ -301,7 +301,7 @@ class _SessionsTabState extends State<_SessionsTab> {
         TextField(controller: end, decoration: InputDecoration(labelText: widget.s.t('end_time'))),
         TextField(controller: notes, decoration: InputDecoration(labelText: widget.s.t('notes_optional')), maxLines: 2),
       ]))),
-      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(widget.s.t('cancel'))), FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(widget.s.t('save'))],
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(widget.s.t('cancel'))), FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(widget.s.t('save')))],
     )));
     if (ok != true) return;
     try { await widget.repo.updateSession(row['id'] as int, status: status, topic: topic.text, notes: notes.text, actualStart: start.text, actualEnd: end.text); if (mounted) setState(_reload); }
@@ -403,6 +403,6 @@ class _AttendanceDialogState extends State<_AttendanceDialog> {
         ]));
       });
     })),
-    actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(widget.s.t('close'))],
+    actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(widget.s.t('close')))],
   );
 }
