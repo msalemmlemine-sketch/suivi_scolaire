@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:sqflite/sqflite.dart';
 
+import 'app/app.dart';
 import 'core/database/app_database.dart';
 
-/// Phase 1-2 skeleton: opens the SQLite database (running migrations)
-/// and shows the schema version. Real screens come in the next phases.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final dir = await getApplicationDocumentsDirectory();
-  final db = await AppDatabase.open(directory: dir.path);
-  final rows = await db.db.rawQuery('PRAGMA user_version');
-  final v = Sqflite.firstIntValue(rows);
-  runApp(MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: Scaffold(body: Center(child: Text('Suivi Scolaire — DB v$v'))),
-  ));
+  final adb = await AppDatabase.open(directory: dir.path);
+  final rows = await adb.db.query('app_settings',
+      columns: ['value'], where: 'key = ?', whereArgs: ['ui_language']);
+  final lang = rows.isEmpty ? 'ar' : rows.first['value'] as String;
+  runApp(SuiviApp(db: adb.db, initialLanguage: lang == 'fr' ? 'fr' : 'ar'));
 }
