@@ -80,7 +80,7 @@ class _InstitutionDetailsPageState extends State<InstitutionDetailsPage> {
       final yearName = name.text.trim();
       final startDate = start.text.trim();
       final endDate = end.text.trim();
-      if (yearName.isEmpty || !_validDate(startDate) || !_validDate(endDate) || endDate <= startDate) throw const FormatException();
+      if (yearName.isEmpty || !_validDate(startDate) || !_validDate(endDate) || endDate.compareTo(startDate) <= 0) throw const FormatException();
       await widget.db.transaction((txn) async {
         int yearId;
         final existing = await txn.query('academic_years', where: 'name = ?', whereArgs: [yearName]);

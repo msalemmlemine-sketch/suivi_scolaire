@@ -18,7 +18,7 @@ class MorePage extends StatelessWidget {
         Card(child: InkWell(
           borderRadius: BorderRadius.circular(18), onTap: onOpenFollowup,
           child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [
-            _IconBox(icon: Icons.fact_check_outlined), const SizedBox(width: 14),
+            const _IconBox(icon: Icons.fact_check_outlined), const SizedBox(width: 14),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(s.t('followup'), style: text.titleMedium), const SizedBox(height: 4),
               Text(s.t('followup_menu_hint'), style: text.bodySmall),
