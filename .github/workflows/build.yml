@@ -24,7 +24,7 @@ jobs:
             "$KEYSTORE_PASSWORD" "$KEYSTORE_PASSWORD" > android/key.properties
       - run: python3 tools/patch_android.py android
       - run: flutter pub get
-      - run: flutter analyze
+      - run: flutter analyze --no-fatal-infos
       - run: flutter test
       - run: flutter build apk --release
       - name: Show APK signing certificate

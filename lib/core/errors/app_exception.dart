@@ -14,5 +14,8 @@ class ErrorCodes {
   static const notActive = 'enrollment_not_active';
   static const classNotFound = 'class_not_found';
   static const nameRequired = 'name_required';
+  static const requiredField = 'required';
+  static const invalidDates = 'invalid_dates';
+  static const classExists = 'class_exists';
   static const unknown = 'unknown';
 }

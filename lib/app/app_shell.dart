@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../features/dashboard/dashboard_page.dart';
 import '../features/institutions/institutions_page.dart';
+import '../features/students/students_page.dart';
 import '../features/more/more_page.dart';
 import '../widgets/empty_state.dart';
 import 'strings.dart';
@@ -30,6 +31,7 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _tab = 0;
+  int _rev = 0;
 
   Widget _comingSoon(IconData icon) =>
       EmptyState(icon: icon, title: widget.s.t('coming_title'), body: widget.s.t('coming_body'));
@@ -42,8 +44,13 @@ class _AppShellState extends State<AppShell> {
       appBar: AppBar(title: Text(titles[_tab])),
       body: IndexedStack(index: _tab, children: [
         DashboardPage(db: widget.db, s: s, onOpenTab: (i) => setState(() => _tab = i)),
-        InstitutionsPage(db: widget.db, s: s, onChanged: () => setState(() {})),
-        _comingSoon(Icons.groups_outlined),
+        InstitutionsPage(db: widget.db, s: s, onChanged: () => setState(() => _rev++)),
+        StudentsPage(
+          db: widget.db,
+          s: s,
+          revision: _rev,
+          onGoInstitutions: () => setState(() => _tab = 1),
+        ),
         _comingSoon(Icons.calendar_view_week_outlined),
         MorePage(
           s: s,

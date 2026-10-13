@@ -7,6 +7,7 @@ import '../../core/errors/app_exception.dart';
 import '../../models/institution.dart';
 import '../../repositories/institution_repository.dart';
 import '../../widgets/empty_state.dart';
+import 'institution_detail_page.dart';
 
 class InstitutionsPage extends StatefulWidget {
   const InstitutionsPage({super.key, required this.db, required this.s, this.onChanged});
@@ -45,6 +46,13 @@ class _InstitutionsPageState extends State<InstitutionsPage> {
       builder: (_) => _InstitutionForm(s: s, repo: _repo, inst: inst, errorText: _errorText),
     );
     if (saved == true) _reload();
+  }
+
+  Future<void> _open(Institution i) async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => InstitutionDetailPage(db: widget.db, s: s, inst: i),
+    ));
+    _reload();
   }
 
   Future<void> _toggleArchive(Institution i) async {
@@ -122,6 +130,7 @@ class _InstitutionsPageState extends State<InstitutionsPage> {
                 itemBuilder: (_, i) => _InstitutionCard(
                   inst: items[i],
                   s: s,
+                  onOpen: () => _open(items[i]),
                   onEdit: () => _openForm(items[i]),
                   onToggleArchive: () => _toggleArchive(items[i]),
                 ),
@@ -135,10 +144,10 @@ class _InstitutionsPageState extends State<InstitutionsPage> {
 }
 
 class _InstitutionCard extends StatelessWidget {
-  const _InstitutionCard({required this.inst, required this.s, required this.onEdit, required this.onToggleArchive});
+  const _InstitutionCard({required this.inst, required this.s, required this.onOpen, required this.onEdit, required this.onToggleArchive});
   final Institution inst;
   final S s;
-  final VoidCallback onEdit, onToggleArchive;
+  final VoidCallback onOpen, onEdit, onToggleArchive;
 
   @override
   Widget build(BuildContext context) {
@@ -149,7 +158,10 @@ class _InstitutionCard extends StatelessWidget {
       if (inst.address?.trim().isNotEmpty == true) inst.address!.trim(),
     ];
     return Card(
-      child: Padding(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onOpen,
+        child: Padding(
         padding: const EdgeInsets.all(14),
         child: Row(children: [
           Container(
@@ -175,6 +187,7 @@ class _InstitutionCard extends StatelessWidget {
             icon: Icon(inst.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined),
           ),
         ]),
+      ),
       ),
     );
   }
