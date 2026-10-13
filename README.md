@@ -1,6 +1,6 @@
 # Suivi Scolaire — متابعة التلاميذ
 
-Status: phases 1–2 (project skeleton + database) only.
+Status: phases 1–2 (skeleton + database) plus phase 3 UI pass (design fixes, real Institutions screen, UI/report language settings). Dart code is NOT compiled locally; CI (.github/workflows/build.yml) runs analyze, test and build.
 
 Verified here: `python3 tools/test_schema.py` → 24/24 (real SQLite 3.45).
 NOT verified here (Flutter/Dart not installed in the authoring sandbox):

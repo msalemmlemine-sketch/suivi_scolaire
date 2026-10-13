@@ -13,5 +13,6 @@ class ErrorCodes {
   static const classMismatch = 'class_institution_year_mismatch';
   static const notActive = 'enrollment_not_active';
   static const classNotFound = 'class_not_found';
+  static const nameRequired = 'name_required';
   static const unknown = 'unknown';
 }

@@ -11,9 +11,14 @@ const String kDesignerName = 'MEDSALEM EBNOU OUMAR';
 const String kAppVersion = '0.2.1';
 
 class SuiviApp extends StatefulWidget {
-  const SuiviApp({super.key, required this.db, required this.initialLanguage});
+  const SuiviApp({
+    super.key,
+    required this.db,
+    required this.initialLanguage,
+    this.initialReportLanguage = 'fr',
+  });
   final Database db;
-  final String initialLanguage;
+  final String initialLanguage, initialReportLanguage;
 
   @override
   State<SuiviApp> createState() => _SuiviAppState();
@@ -22,16 +27,23 @@ class SuiviApp extends StatefulWidget {
 class _SuiviAppState extends State<SuiviApp> {
   late String _lang = widget.initialLanguage;
 
-  Future<void> _toggleLanguage() async {
-    final next = _lang == 'ar' ? 'fr' : 'ar';
-    // Only the UI setting changes; student data is never touched.
-    await widget.db.update(
-      'app_settings',
-      {'value': next, 'updated_at': DateTime.now().toUtc().toIso8601String()},
-      where: 'key = ?',
-      whereArgs: ['ui_language'],
-    );
-    if (mounted) setState(() => _lang = next);
+  late String _reportLang = widget.initialReportLanguage;
+
+  Future<void> _saveSetting(String key, String value) => widget.db.insert(
+        'app_settings',
+        {'key': key, 'value': value, 'updated_at': DateTime.now().toUtc().toIso8601String()},
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+  // Only settings change; student data is never touched.
+  Future<void> _setUiLanguage(String code) async {
+    await _saveSetting('ui_language', code);
+    if (mounted) setState(() => _lang = code);
+  }
+
+  Future<void> _setReportLanguage(String code) async {
+    await _saveSetting('report_language', code);
+    if (mounted) setState(() => _reportLang = code);
   }
 
   @override
@@ -53,7 +65,9 @@ class _SuiviAppState extends State<SuiviApp> {
         s: s,
         designer: kDesignerName,
         version: kAppVersion,
-        onToggleLanguage: _toggleLanguage,
+        reportLanguage: _reportLang,
+        onSetUiLanguage: _setUiLanguage,
+        onSetReportLanguage: _setReportLanguage,
       ),
     );
   }

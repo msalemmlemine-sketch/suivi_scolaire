@@ -30,10 +30,10 @@ ThemeData buildTheme() {
     textTheme: base.textTheme
         .apply(bodyColor: AppColors.ink, displayColor: AppColors.ink)
         .copyWith(
-          titleLarge: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, height: 1.3),
-          titleMedium: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, height: 1.35),
-          bodyMedium: const TextStyle(fontSize: 14, height: 1.5),
-          bodySmall: const TextStyle(fontSize: 12, height: 1.5, color: AppColors.muted),
+          titleLarge: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, height: 1.4, color: AppColors.ink),
+          titleMedium: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, height: 1.45, color: AppColors.ink),
+          bodyMedium: const TextStyle(fontSize: 14, height: 1.6, color: AppColors.ink),
+          bodySmall: const TextStyle(fontSize: 13, height: 1.6, color: AppColors.muted),
         ),
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.teal,
@@ -41,6 +41,7 @@ ThemeData buildTheme() {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
+      toolbarHeight: 56,
       titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
     ),
     cardTheme: CardThemeData(
@@ -55,16 +56,48 @@ ThemeData buildTheme() {
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: Colors.white,
       elevation: 0,
-      height: 68,
+      height: 72,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       indicatorColor: AppColors.tealSoft,
       iconTheme: WidgetStateProperty.resolveWith((s) => IconThemeData(
             color: s.contains(WidgetState.selected) ? AppColors.teal : AppColors.muted,
           )),
       labelTextStyle: WidgetStateProperty.resolveWith((s) => TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: s.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
             color: s.contains(WidgetState.selected) ? AppColors.teal : AppColors.muted,
           )),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.line)),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.teal, width: 2)),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.teal,
+        foregroundColor: Colors.white,
+        minimumSize: const Size(0, 48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.teal,
+        minimumSize: const Size(0, 48),
+        side: const BorderSide(color: AppColors.line),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      backgroundColor: AppColors.teal,
+      foregroundColor: Colors.white,
     ),
     dividerTheme: const DividerThemeData(color: AppColors.line, space: 1, thickness: 1),
   );

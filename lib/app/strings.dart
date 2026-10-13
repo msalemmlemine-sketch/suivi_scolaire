@@ -38,6 +38,46 @@ class S {
       'ar': 'تتوفر في التحديث القادم. البيانات المحفوظة لن تتأثر.',
       'fr': 'Disponible à la prochaine mise à jour. Vos données ne seront pas affectées.'
     },
+    'timetable_short': {'ar': 'الحصص', 'fr': 'Planning'},
+    'add_institution': {'ar': 'إضافة مؤسسة', 'fr': 'Ajouter un établissement'},
+    'edit_institution': {'ar': 'تعديل المؤسسة', 'fr': 'Modifier l’établissement'},
+    'name_ar': {'ar': 'اسم المؤسسة بالعربية', 'fr': 'Nom en arabe'},
+    'name_fr': {'ar': 'اسم المؤسسة بالفرنسية', 'fr': 'Nom en français'},
+    'short_name': {'ar': 'الاسم المختصر', 'fr': 'Nom court'},
+    'address': {'ar': 'العنوان', 'fr': 'Adresse'},
+    'phone': {'ar': 'الهاتف', 'fr': 'Téléphone'},
+    'email': {'ar': 'البريد الإلكتروني', 'fr': 'E-mail'},
+    'notes': {'ar': 'ملاحظات', 'fr': 'Notes'},
+    'save': {'ar': 'حفظ', 'fr': 'Enregistrer'},
+    'cancel': {'ar': 'إلغاء', 'fr': 'Annuler'},
+    'archive': {'ar': 'أرشفة', 'fr': 'Archiver'},
+    'restore': {'ar': 'استعادة', 'fr': 'Restaurer'},
+    'edit': {'ar': 'تعديل', 'fr': 'Modifier'},
+    'tab_active': {'ar': 'النشطة', 'fr': 'Actifs'},
+    'tab_archived': {'ar': 'المؤرشفة', 'fr': 'Archivés'},
+    'err_name_required': {
+      'ar': 'أدخل اسم المؤسسة بالعربية أو الفرنسية.',
+      'fr': 'Saisissez le nom en arabe ou en français.'
+    },
+    'err_unknown': {'ar': 'تعذر تنفيذ العملية.', 'fr': 'Opération impossible.'},
+    'no_inst_title': {'ar': 'لا توجد مؤسسات بعد', 'fr': 'Aucun établissement'},
+    'no_inst_body': {
+      'ar': 'أضف مؤسستك الأولى للبدء، ثم أنشئ السنة الدراسية والأقسام.',
+      'fr': 'Ajoutez votre premier établissement pour commencer.'
+    },
+    'no_archived': {'ar': 'لا توجد مؤسسات مؤرشفة', 'fr': 'Aucun établissement archivé'},
+    'archive_confirm': {
+      'ar': 'ستُخفى المؤسسة من القوائم دون حذف أي بيانات، ويمكن استعادتها لاحقًا.',
+      'fr': 'L’établissement sera masqué sans supprimer de données ; vous pourrez le restaurer.'
+    },
+    'ui_language': {'ar': 'لغة الواجهة', 'fr': 'Langue de l’interface'},
+    'report_language': {'ar': 'لغة القوائم والتقارير', 'fr': 'Langue des listes et rapports'},
+    'report_language_hint': {
+      'ar': 'مستقلة عن لغة الواجهة (الافتراضية: الفرنسية).',
+      'fr': 'Indépendante de la langue de l’interface (par défaut : français).'
+    },
+    'lang_ar': {'ar': 'العربية', 'fr': 'العربية'},
+    'lang_fr': {'ar': 'Français', 'fr': 'Français'},
     'language': {'ar': 'اللغة', 'fr': 'Langue'},
     'language_value': {'ar': 'العربية', 'fr': 'Français'},
     'switch_language': {'ar': 'Passer en français', 'fr': 'التبديل إلى العربية'},

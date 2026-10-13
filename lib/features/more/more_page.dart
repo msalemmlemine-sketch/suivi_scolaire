@@ -9,11 +9,14 @@ class MorePage extends StatelessWidget {
     required this.s,
     required this.designer,
     required this.version,
-    required this.onToggleLanguage,
+    required this.reportLanguage,
+    required this.onSetUiLanguage,
+    required this.onSetReportLanguage,
   });
   final S s;
   final String designer, version;
-  final VoidCallback onToggleLanguage;
+  final String reportLanguage;
+  final ValueChanged<String> onSetUiLanguage, onSetReportLanguage;
 
   @override
   Widget build(BuildContext context) {
@@ -22,12 +25,27 @@ class MorePage extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         Card(
-          clipBehavior: Clip.antiAlias,
-          child: ListTile(
-            leading: const Icon(Icons.translate, color: AppColors.teal),
-            title: Text(s.t('language')),
-            subtitle: Text(s.t('language_value')),
-            trailing: TextButton(onPressed: onToggleLanguage, child: Text(s.t('switch_language'))),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                const Icon(Icons.translate, color: AppColors.teal),
+                const SizedBox(width: 10),
+                Expanded(child: Text(s.t('ui_language'), style: text.titleMedium)),
+              ]),
+              const SizedBox(height: 10),
+              _LangPicker(value: s.code, onChanged: onSetUiLanguage),
+              const Divider(height: 28),
+              Row(children: [
+                const Icon(Icons.description_outlined, color: AppColors.teal),
+                const SizedBox(width: 10),
+                Expanded(child: Text(s.t('report_language'), style: text.titleMedium)),
+              ]),
+              const SizedBox(height: 10),
+              _LangPicker(value: reportLanguage, onChanged: onSetReportLanguage),
+              const SizedBox(height: 8),
+              Text(s.t('report_language_hint'), style: text.bodySmall),
+            ]),
           ),
         ),
         const SizedBox(height: 12),
@@ -50,6 +68,28 @@ class MorePage extends StatelessWidget {
   }
 }
 
+class _LangPicker extends StatelessWidget {
+  const _LangPicker({required this.value, required this.onChanged});
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: SegmentedButton<String>(
+        showSelectedIcon: false,
+        segments: const [
+          ButtonSegment(value: 'ar', label: Text('العربية')),
+          ButtonSegment(value: 'fr', label: Text('Français')),
+        ],
+        selected: {value},
+        onSelectionChanged: (v) => onChanged(v.first),
+      ),
+    );
+  }
+}
+
 class _Row extends StatelessWidget {
   const _Row({required this.label, required this.value});
   final String label, value;
@@ -57,8 +97,9 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return Row(children: [
-      Expanded(child: Text(label, style: text.bodySmall)),
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: text.bodySmall),
+      const SizedBox(height: 2),
       Text(value, style: text.titleMedium),
     ]);
   }

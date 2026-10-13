@@ -8,8 +8,17 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final dir = await getApplicationDocumentsDirectory();
   final adb = await AppDatabase.open(directory: dir.path);
-  final rows = await adb.db.query('app_settings',
-      columns: ['value'], where: 'key = ?', whereArgs: ['ui_language']);
-  final lang = rows.isEmpty ? 'ar' : rows.first['value'] as String;
-  runApp(SuiviApp(db: adb.db, initialLanguage: lang == 'fr' ? 'fr' : 'ar'));
+  Future<String?> setting(String key) async {
+    final rows = await adb.db.query('app_settings',
+        columns: ['value'], where: 'key = ?', whereArgs: [key]);
+    return rows.isEmpty ? null : rows.first['value'] as String;
+  }
+
+  final ui = await setting('ui_language');
+  final report = await setting('report_language');
+  runApp(SuiviApp(
+    db: adb.db,
+    initialLanguage: ui == 'fr' ? 'fr' : 'ar',
+    initialReportLanguage: report == 'ar' ? 'ar' : 'fr',
+  ));
 }
