@@ -43,11 +43,11 @@ class DashboardPage extends StatelessWidget {
         final st = snap.data ?? const DashboardStats(0, 0, 0, null);
         final text = Theme.of(context).textTheme;
         return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
           children: [
-            _Hero(s: s, institution: st.firstInstitution, onAdd: st.institutions == 0 ? () => onOpenTab(1) : null),
+            _Hero(s: s, institution: st.firstInstitution),
             const SizedBox(height: 16),
-            Text(s.t('overview'), style: text.titleMedium),
+            Text(s.t('overview'), style: text.titleMedium?.copyWith(color: AppColors.ink)),
             const SizedBox(height: 8),
             Card(
               child: Padding(
@@ -64,15 +64,15 @@ class DashboardPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            Text(s.t('quick_access'), style: text.titleMedium),
+            Text(s.t('quick_access'), style: text.titleMedium?.copyWith(color: AppColors.ink)),
             const SizedBox(height: 8),
-            IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
               _Quick(icon: Icons.account_balance_outlined, label: s.t('institutions'), onTap: () => onOpenTab(1)),
               const SizedBox(width: 10),
               _Quick(icon: Icons.groups_outlined, label: s.t('students'), onTap: () => onOpenTab(2)),
               const SizedBox(width: 10),
-              _Quick(icon: Icons.calendar_view_week_outlined, label: s.t('timetable_short'), onTap: () => onOpenTab(3)),
-            ])),
+              _Quick(icon: Icons.calendar_view_week_outlined, label: s.t('timetable'), onTap: () => onOpenTab(3)),
+            ]),
             const SizedBox(height: 20),
             _Section(title: s.t('today_sessions'), message: s.t('no_sessions'), icon: Icons.event_available_outlined),
             const SizedBox(height: 12),
@@ -85,17 +85,16 @@ class DashboardPage extends StatelessWidget {
 }
 
 class _Hero extends StatelessWidget {
-  const _Hero({required this.s, required this.institution, this.onAdd});
+  const _Hero({required this.s, required this.institution});
   final S s;
   final String? institution;
-  final VoidCallback? onAdd;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: AppColors.tealDark, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.tealDark, AppColors.teal]), borderRadius: BorderRadius.circular(20)),
       child: Row(children: [
         Container(width: 4, height: 52, decoration: BoxDecoration(color: AppColors.amber, borderRadius: BorderRadius.circular(2))),
         const SizedBox(width: 14),
@@ -109,16 +108,6 @@ class _Hero extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            if (onAdd != null) ...[
-              const SizedBox(height: 10),
-              FilledButton.icon(
-                onPressed: onAdd,
-                style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.amber, foregroundColor: Colors.white, minimumSize: const Size(0, 40)),
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(s.t('add_institution')),
-              ),
-            ],
           ]),
         ),
       ]),
@@ -158,11 +147,11 @@ class _Quick extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
             child: Column(children: [
               Icon(icon, color: AppColors.teal, size: 28),
               const SizedBox(height: 8),
-              Text(label, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
+              Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.ink, fontWeight: FontWeight.w700), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
             ]),
           ),
         ),
@@ -187,9 +176,9 @@ class _Section extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: text.titleMedium),
+              Text(title, style: text.titleMedium?.copyWith(color: AppColors.ink)),
               const SizedBox(height: 2),
-              Text(message, style: text.bodySmall),
+              Text(message, style: text.bodySmall?.copyWith(color: AppColors.muted)),
             ]),
           ),
         ]),

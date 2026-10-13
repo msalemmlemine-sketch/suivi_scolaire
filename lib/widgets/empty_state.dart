@@ -3,12 +3,10 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 
 class EmptyState extends StatelessWidget {
-  const EmptyState({super.key, required this.icon, required this.title, this.body, this.actionLabel, this.onAction});
+  const EmptyState({super.key, required this.icon, required this.title, this.body});
   final IconData icon;
   final String title;
   final String? body;
-  final String? actionLabel;
-  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -30,10 +28,6 @@ class EmptyState extends StatelessWidget {
             if (body != null) ...[
               const SizedBox(height: 6),
               Text(body!, style: text.bodySmall, textAlign: TextAlign.center),
-            ],
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 16),
-              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
             ],
           ],
         ),

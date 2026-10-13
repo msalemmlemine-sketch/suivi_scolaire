@@ -1,10 +1,10 @@
 name: suivi_scolaire
 description: "Suivi Scolaire — متابعة التلاميذ. Offline school-follow-up app (AR/FR)."
 publish_to: "none"
-version: 0.1.0+1
+version: 0.6.0+5
 
 environment:
-  sdk: ">=3.3.0 <4.0.0"
+  sdk: ">=3.6.0 <4.0.0"
 
 # NOTE: versions below were written without access to pub.dev from the authoring
 # sandbox. Run `flutter pub get` and adjust if the resolver complains.

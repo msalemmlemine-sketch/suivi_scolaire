@@ -8,17 +8,12 @@ import 'theme.dart';
 
 /// Change these two lines to change the credit shown in the app.
 const String kDesignerName = 'MEDSALEM EBNOU OUMAR';
-const String kAppVersion = '0.2.1';
+const String kAppVersion = '0.6.0';
 
 class SuiviApp extends StatefulWidget {
-  const SuiviApp({
-    super.key,
-    required this.db,
-    required this.initialLanguage,
-    this.initialReportLanguage = 'fr',
-  });
+  const SuiviApp({super.key, required this.db, required this.initialLanguage});
   final Database db;
-  final String initialLanguage, initialReportLanguage;
+  final String initialLanguage;
 
   @override
   State<SuiviApp> createState() => _SuiviAppState();
@@ -27,23 +22,16 @@ class SuiviApp extends StatefulWidget {
 class _SuiviAppState extends State<SuiviApp> {
   late String _lang = widget.initialLanguage;
 
-  late String _reportLang = widget.initialReportLanguage;
-
-  Future<void> _saveSetting(String key, String value) => widget.db.insert(
-        'app_settings',
-        {'key': key, 'value': value, 'updated_at': DateTime.now().toUtc().toIso8601String()},
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-
-  // Only settings change; student data is never touched.
-  Future<void> _setUiLanguage(String code) async {
-    await _saveSetting('ui_language', code);
-    if (mounted) setState(() => _lang = code);
-  }
-
-  Future<void> _setReportLanguage(String code) async {
-    await _saveSetting('report_language', code);
-    if (mounted) setState(() => _reportLang = code);
+  Future<void> _toggleLanguage() async {
+    final next = _lang == 'ar' ? 'fr' : 'ar';
+    // Only the UI setting changes; student data is never touched.
+    await widget.db.update(
+      'app_settings',
+      {'value': next, 'updated_at': DateTime.now().toUtc().toIso8601String()},
+      where: 'key = ?',
+      whereArgs: ['ui_language'],
+    );
+    if (mounted) setState(() => _lang = next);
   }
 
   @override
@@ -65,9 +53,7 @@ class _SuiviAppState extends State<SuiviApp> {
         s: s,
         designer: kDesignerName,
         version: kAppVersion,
-        reportLanguage: _reportLang,
-        onSetUiLanguage: _setUiLanguage,
-        onSetReportLanguage: _setReportLanguage,
+        onToggleLanguage: _toggleLanguage,
       ),
     );
   }

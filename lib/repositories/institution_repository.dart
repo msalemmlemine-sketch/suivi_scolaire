@@ -1,95 +1,57 @@
 import 'package:sqflite/sqflite.dart';
 
-import '../core/errors/app_exception.dart';
-import '../models/institution.dart';
-
-/// Institutions are never deleted: they are archived and can be restored,
-/// so historical classes, enrollments and grades stay intact.
+/// Local-only institution CRUD. Historical references are preserved by SQLite
+/// RESTRICT constraints; archiving is preferred over deletion.
 class InstitutionRepository {
   InstitutionRepository(this._db);
   final Database _db;
 
-  Future<List<Institution>> list({required bool archived}) async {
-    final rows = await _db.query('institutions',
-        where: 'status = ?',
-        whereArgs: [archived ? 'archived' : 'active'],
-        orderBy: 'id');
-    return rows.map(Institution.fromMap).toList();
-  }
+  Future<List<Map<String, Object?>>> list({bool includeArchived = false}) =>
+      _db.rawQuery('''
+        SELECT i.*, COUNT(DISTINCT c.id) AS class_count,
+               COUNT(DISTINCT CASE WHEN e.status = 'active' THEN e.student_id END) AS student_count
+        FROM institutions i
+        LEFT JOIN classes c ON c.institution_id = i.id AND c.status = 'active'
+        LEFT JOIN enrollments e ON e.institution_id = i.id AND e.status = 'active'
+        ${includeArchived ? '' : "WHERE i.status = 'active'"}
+        GROUP BY i.id
+        ORDER BY i.status, COALESCE(NULLIF(i.name_fr, ''), i.name_ar), i.id
+      ''');
 
-  static String? _clean(String? v) {
-    final t = v?.trim();
-    return (t == null || t.isEmpty) ? null : t;
-  }
-
-  Map<String, Object?> _values({
-    String? nameAr,
-    String? nameFr,
-    String? shortName,
-    String? address,
-    String? phone,
-    String? email,
-    String? notes,
-  }) {
-    final ar = _clean(nameAr), fr = _clean(nameFr);
-    if (ar == null && fr == null) throw const AppException(ErrorCodes.nameRequired);
-    return {
-      'name_ar': ar,
-      'name_fr': fr,
-      'short_name': _clean(shortName),
-      'address': _clean(address),
-      'phone': _clean(phone),
-      'email': _clean(email),
-      'notes': _clean(notes),
-    };
-  }
-
-  Future<int> add({
-    String? nameAr,
-    String? nameFr,
-    String? shortName,
-    String? address,
-    String? phone,
-    String? email,
-    String? notes,
-  }) =>
-      _db.insert(
-          'institutions',
-          _values(
-              nameAr: nameAr,
-              nameFr: nameFr,
-              shortName: shortName,
-              address: address,
-              phone: phone,
-              email: email,
-              notes: notes));
-
-  Future<void> update(
-    int id, {
-    String? nameAr,
-    String? nameFr,
+  Future<int> save({
+    int? id,
+    required String nameAr,
+    required String nameFr,
     String? shortName,
     String? address,
     String? phone,
     String? email,
     String? notes,
   }) async {
-    await _db.update(
-        'institutions',
-        _values(
-            nameAr: nameAr,
-            nameFr: nameFr,
-            shortName: shortName,
-            address: address,
-            phone: phone,
-            email: email,
-            notes: notes),
-        where: 'id = ?',
-        whereArgs: [id]);
+    final ar = nameAr.trim();
+    final fr = nameFr.trim();
+    if (ar.isEmpty && fr.isEmpty) throw ArgumentError('institution_name_required');
+    final values = <String, Object?>{
+      'name_ar': ar.isEmpty ? null : ar,
+      'name_fr': fr.isEmpty ? null : fr,
+      'short_name': _nullIfBlank(shortName),
+      'address': _nullIfBlank(address),
+      'phone': _nullIfBlank(phone),
+      'email': _nullIfBlank(email),
+      'notes': _nullIfBlank(notes),
+    };
+    if (id == null) return _db.insert('institutions', values);
+    await _db.update('institutions', values, where: 'id = ?', whereArgs: [id]);
+    return id;
   }
 
   Future<void> setArchived(int id, bool archived) async {
     await _db.update('institutions', {'status': archived ? 'archived' : 'active'},
         where: 'id = ?', whereArgs: [id]);
+  }
+
+  String? _nullIfBlank(String? value) {
+    final v = value?.trim();
+    return v == null || v.isEmpty ? null : v;
   }
 }

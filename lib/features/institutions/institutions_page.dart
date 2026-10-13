@@ -3,136 +3,198 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../app/strings.dart';
 import '../../app/theme.dart';
-import '../../core/errors/app_exception.dart';
-import '../../models/institution.dart';
 import '../../repositories/institution_repository.dart';
-import '../../widgets/empty_state.dart';
-import 'institution_detail_page.dart';
+import 'institution_details_page.dart';
 
 class InstitutionsPage extends StatefulWidget {
-  const InstitutionsPage({super.key, required this.db, required this.s, this.onChanged});
+  const InstitutionsPage({super.key, required this.db, required this.s});
   final Database db;
   final S s;
-  final VoidCallback? onChanged;
 
   @override
   State<InstitutionsPage> createState() => _InstitutionsPageState();
 }
 
 class _InstitutionsPageState extends State<InstitutionsPage> {
-  late final InstitutionRepository _repo = InstitutionRepository(widget.db);
-  bool _archived = false;
-  late Future<List<Institution>> _future = _repo.list(archived: _archived);
+  late InstitutionRepository _repo;
+  late Future<List<Map<String, Object?>>> _future;
+  bool _showArchived = false;
 
-  S get s => widget.s;
-
-  void _reload() {
-    setState(() => _future = _repo.list(archived: _archived));
-    widget.onChanged?.call();
-  }
-
-  void _toast(String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-
-  String _errorText(Object e) =>
-      e is AppException && e.code == ErrorCodes.nameRequired ? s.t('err_name_required') : s.t('err_unknown');
-
-  Future<void> _openForm([Institution? inst]) async {
-    final saved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: Colors.white,
-      builder: (_) => _InstitutionForm(s: s, repo: _repo, inst: inst, errorText: _errorText),
-    );
-    if (saved == true) _reload();
-  }
-
-  Future<void> _open(Institution i) async {
-    await Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => InstitutionDetailPage(db: widget.db, s: s, inst: i),
-    ));
+  @override
+  void initState() {
+    super.initState();
+    _repo = InstitutionRepository(widget.db);
     _reload();
   }
 
-  Future<void> _toggleArchive(Institution i) async {
-    if (!i.isArchived) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(s.t('archive')),
-          content: Text(s.t('archive_confirm')),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.t('cancel'))),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(s.t('archive'))),
-          ],
+  void _reload() {
+    _future = _repo.list(includeArchived: _showArchived);
+  }
+
+  String _name(Map<String, Object?> row) {
+    final preferred = widget.s.isAr ? row['name_ar'] : row['name_fr'];
+    final fallback = widget.s.isAr ? row['name_fr'] : row['name_ar'];
+    final value = (preferred as String?)?.trim();
+    if (value != null && value.isNotEmpty) return value;
+    return (fallback as String?) ?? '';
+  }
+
+  Future<void> _edit([Map<String, Object?>? row]) async {
+    final ar = TextEditingController(text: row?['name_ar'] as String? ?? '');
+    final fr = TextEditingController(text: row?['name_fr'] as String? ?? '');
+    final short = TextEditingController(text: row?['short_name'] as String? ?? '');
+    final address = TextEditingController(text: row?['address'] as String? ?? '');
+    final phone = TextEditingController(text: row?['phone'] as String? ?? '');
+    final email = TextEditingController(text: row?['email'] as String? ?? '');
+    final formKey = GlobalKey<FormState>();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(row == null ? widget.s.t('institution_add') : widget.s.t('institution_edit')),
+        content: SizedBox(
+          width: 480,
+          child: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                TextFormField(controller: ar, decoration: InputDecoration(labelText: widget.s.t('institution_name_ar'))),
+                const SizedBox(height: 10),
+                TextFormField(controller: fr, decoration: InputDecoration(labelText: widget.s.t('institution_name_fr'))),
+                const SizedBox(height: 10),
+                TextFormField(controller: short, decoration: InputDecoration(labelText: widget.s.t('institution_short'))),
+                const SizedBox(height: 10),
+                TextFormField(controller: address, decoration: InputDecoration(labelText: widget.s.t('address'))),
+                const SizedBox(height: 10),
+                TextFormField(controller: phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: widget.s.t('phone'))),
+                const SizedBox(height: 10),
+                TextFormField(controller: email, keyboardType: TextInputType.emailAddress, decoration: InputDecoration(labelText: widget.s.t('email'))),
+                const SizedBox(height: 8),
+                Text(widget.s.t('institution_name_hint'), style: Theme.of(context).textTheme.bodySmall),
+              ]),
+            ),
+          ),
         ),
-      );
-      if (ok != true) return;
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(widget.s.t('cancel'))),
+          FilledButton(onPressed: () {
+            if (ar.text.trim().isEmpty && fr.text.trim().isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.s.t('institution_name_required'))));
+              return;
+            }
+            Navigator.pop(dialogContext, true);
+          }, child: Text(widget.s.t('save'))),
+        ],
+      ),
+    );
+    if (result == true && mounted) {
+      try {
+        await _repo.save(
+          id: row?['id'] as int?, nameAr: ar.text, nameFr: fr.text,
+          shortName: short.text, address: address.text, phone: phone.text, email: email.text,
+        );
+        if (mounted) setState(_reload);
+      } catch (_) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.s.t('save_failed'))));
+      }
     }
-    try {
-      await _repo.setArchived(i.id, !i.isArchived);
-      _reload();
-    } catch (e) {
-      _toast(_errorText(e));
-    }
+    ar.dispose(); fr.dispose(); short.dispose(); address.dispose(); phone.dispose(); email.dispose();
+  }
+
+  Future<void> _toggleArchive(Map<String, Object?> row) async {
+    final archived = row['status'] == 'archived';
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text(archived ? widget.s.t('institution_restore') : widget.s.t('institution_archive')),
+        content: Text(archived ? widget.s.t('institution_restore_confirm') : widget.s.t('institution_archive_confirm')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: Text(widget.s.t('cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: Text(widget.s.t('confirm'))),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await _repo.setArchived(row['id'] as int, !archived);
+    if (mounted) setState(_reload);
   }
 
   @override
   Widget build(BuildContext context) {
+    final s = widget.s;
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: _archived
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: () => _openForm(),
-              icon: const Icon(Icons.add),
-              label: Text(s.t('add_institution')),
-            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _edit(), icon: const Icon(Icons.add), label: Text(s.t('institution_add')),
+      ),
       body: Column(children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: SizedBox(
-            width: double.infinity,
-            child: SegmentedButton<bool>(
-              showSelectedIcon: false,
-              segments: [
-                ButtonSegment(value: false, label: Text(s.t('tab_active'))),
-                ButtonSegment(value: true, label: Text(s.t('tab_archived'))),
-              ],
-              selected: {_archived},
-              onSelectionChanged: (v) {
-                _archived = v.first;
-                _reload();
-              },
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Row(children: [
+            Expanded(child: Text(s.t('institutions_description'), style: Theme.of(context).textTheme.bodyMedium)),
+            const SizedBox(width: 8),
+            FilterChip(
+              label: Text(s.t('show_archived')), selected: _showArchived,
+              onSelected: (v) => setState(() { _showArchived = v; _reload(); }),
             ),
-          ),
+          ]),
         ),
         Expanded(
-          child: FutureBuilder<List<Institution>>(
+          child: FutureBuilder<List<Map<String, Object?>>>(
             future: _future,
             builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final items = snap.data ?? const <Institution>[];
-              if (items.isEmpty) {
-                return EmptyState(
-                  icon: Icons.account_balance_outlined,
-                  title: s.t(_archived ? 'no_archived' : 'no_inst_title'),
-                  body: _archived ? null : s.t('no_inst_body'),
-                );
-              }
-              return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                itemCount: items.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (_, i) => _InstitutionCard(
-                  inst: items[i],
-                  s: s,
-                  onOpen: () => _open(items[i]),
-                  onEdit: () => _openForm(items[i]),
-                  onToggleArchive: () => _toggleArchive(items[i]),
+              if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+              if (snap.hasError) return Center(child: Text(s.t('load_failed')));
+              final rows = snap.data ?? [];
+              if (rows.isEmpty) return _EmptyInstitutions(s: s, onAdd: () => _edit());
+              return RefreshIndicator(
+                onRefresh: () async { setState(_reload); await _future; },
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 92),
+                  itemCount: rows.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final row = rows[index];
+                    final archived = row['status'] == 'archived';
+                    final classes = row['class_count'] as int? ?? 0;
+                    final students = row['student_count'] as int? ?? 0;
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: archived ? Colors.grey.shade200 : AppColors.tealSoft,
+                            child: Icon(Icons.account_balance_outlined, color: archived ? Colors.grey : AppColors.teal),
+                          ),
+                          title: Text(_name(row), style: const TextStyle(fontWeight: FontWeight.w700)),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 5),
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              if ((row['short_name'] as String?)?.isNotEmpty == true) Text(row['short_name'] as String),
+                              const SizedBox(height: 5),
+                              Wrap(spacing: 12, runSpacing: 4, children: [
+                                _Meta(icon: Icons.class_outlined, text: '${s.t('classes')}: $classes'),
+                                _Meta(icon: Icons.groups_outlined, text: '${s.t('students')}: $students'),
+                                if (archived) _Meta(icon: Icons.archive_outlined, text: s.t('archived')),
+                              ]),
+                              if ((row['phone'] as String?)?.isNotEmpty == true) ...[
+                                const SizedBox(height: 4), Text(row['phone'] as String),
+                              ],
+                            ]),
+                          ),
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (v) { if (v == 'edit') _edit(row); if (v == 'archive') _toggleArchive(row); },
+                            itemBuilder: (_) => [
+                              PopupMenuItem(value: 'edit', child: Text(s.t('edit'))),
+                              PopupMenuItem(value: 'archive', child: Text(archived ? s.t('restore') : s.t('archive'))),
+                            ],
+                          ),
+                          isThreeLine: true,
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                            builder: (_) => InstitutionDetailsPage(db: widget.db, s: s, institution: row),
+                          )),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               );
             },
@@ -143,158 +205,30 @@ class _InstitutionsPageState extends State<InstitutionsPage> {
   }
 }
 
-class _InstitutionCard extends StatelessWidget {
-  const _InstitutionCard({required this.inst, required this.s, required this.onOpen, required this.onEdit, required this.onToggleArchive});
-  final Institution inst;
-  final S s;
-  final VoidCallback onOpen, onEdit, onToggleArchive;
-
+class _Meta extends StatelessWidget {
+  const _Meta({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
   @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final subtitleParts = <String>[
-      if (inst.shortName?.trim().isNotEmpty == true) inst.shortName!.trim(),
-      if (inst.phone?.trim().isNotEmpty == true) inst.phone!.trim(),
-      if (inst.address?.trim().isNotEmpty == true) inst.address!.trim(),
-    ];
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onOpen,
-        child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(color: AppColors.tealSoft, shape: BoxShape.circle),
-            child: const Icon(Icons.account_balance_outlined, color: AppColors.teal),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(inst.displayName(s.isAr), style: text.titleMedium),
-              if (subtitleParts.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Text(subtitleParts.join(' · '), style: text.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
-              ],
-            ]),
-          ),
-          IconButton(tooltip: s.t('edit'), onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
-          IconButton(
-            tooltip: s.t(inst.isArchived ? 'restore' : 'archive'),
-            onPressed: onToggleArchive,
-            icon: Icon(inst.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined),
-          ),
-        ]),
-      ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
+    Icon(icon, size: 15, color: AppColors.muted), const SizedBox(width: 4), Text(text, style: Theme.of(context).textTheme.bodySmall),
+  ]);
 }
 
-class _InstitutionForm extends StatefulWidget {
-  const _InstitutionForm({required this.s, required this.repo, required this.inst, required this.errorText});
+class _EmptyInstitutions extends StatelessWidget {
+  const _EmptyInstitutions({required this.s, required this.onAdd});
   final S s;
-  final InstitutionRepository repo;
-  final Institution? inst;
-  final String Function(Object) errorText;
-
+  final VoidCallback onAdd;
   @override
-  State<_InstitutionForm> createState() => _InstitutionFormState();
-}
-
-class _InstitutionFormState extends State<_InstitutionForm> {
-  late final _ar = TextEditingController(text: widget.inst?.nameAr);
-  late final _fr = TextEditingController(text: widget.inst?.nameFr);
-  late final _short = TextEditingController(text: widget.inst?.shortName);
-  late final _address = TextEditingController(text: widget.inst?.address);
-  late final _phone = TextEditingController(text: widget.inst?.phone);
-  late final _email = TextEditingController(text: widget.inst?.email);
-  late final _notes = TextEditingController(text: widget.inst?.notes);
-  String? _error;
-  bool _busy = false;
-
-  @override
-  void dispose() {
-    for (final c in [_ar, _fr, _short, _address, _phone, _email, _notes]) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      if (widget.inst == null) {
-        await widget.repo.add(
-            nameAr: _ar.text, nameFr: _fr.text, shortName: _short.text, address: _address.text,
-            phone: _phone.text, email: _email.text, notes: _notes.text);
-      } else {
-        await widget.repo.update(widget.inst!.id,
-            nameAr: _ar.text, nameFr: _fr.text, shortName: _short.text, address: _address.text,
-            phone: _phone.text, email: _email.text, notes: _notes.text);
-      }
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _busy = false;
-          _error = widget.errorText(e);
-        });
-      }
-    }
-  }
-
-  Widget _field(TextEditingController c, String label,
-      {TextDirection? dir, TextInputType? type, int maxLines = 1}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TextField(
-        controller: c,
-        textDirection: dir,
-        keyboardType: type,
-        maxLines: maxLines,
-        decoration: InputDecoration(labelText: label),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final s = widget.s;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 20),
-      child: SingleChildScrollView(
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(s.t(widget.inst == null ? 'add_institution' : 'edit_institution'),
-              style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 16),
-          _field(_ar, s.t('name_ar'), dir: TextDirection.rtl),
-          _field(_fr, s.t('name_fr'), dir: TextDirection.ltr),
-          _field(_short, s.t('short_name')),
-          _field(_address, s.t('address')),
-          _field(_phone, s.t('phone'), type: TextInputType.phone, dir: TextDirection.ltr),
-          _field(_email, s.t('email'), type: TextInputType.emailAddress, dir: TextDirection.ltr),
-          _field(_notes, s.t('notes'), maxLines: 3),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(_error!, style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600)),
-            ),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton(
-                  onPressed: _busy ? null : () => Navigator.pop(context, false), child: Text(s.t('cancel'))),
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: FilledButton(onPressed: _busy ? null : _save, child: Text(s.t('save')))),
-          ]),
-        ]),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.account_balance_outlined, size: 58, color: AppColors.teal.withValues(alpha: .65)),
+        const SizedBox(height: 12), Text(s.t('no_institution'), style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 6), Text(s.t('institution_empty_hint'), textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 16), FilledButton.icon(onPressed: onAdd, icon: const Icon(Icons.add), label: Text(s.t('institution_add'))),
+      ]),
+    ),
+  );
 }
