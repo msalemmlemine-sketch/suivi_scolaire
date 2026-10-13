@@ -38,7 +38,7 @@ class ExcelService {
 
       // قراءة الحقول بحسب الترتيب الشائع:
       // 0: رقم التعريف/التسجيل، 1: الاسم بالعربية، 2: الاسم بالفرنسية، 3: الجنس، 4: تاريخ الميلاد
-      final id = row.length > 0 ? row[0]?.value?.toString().trim() : null;
+      final id = row.isNotEmpty ? row[0]?.value?.toString().trim() : null;
       final nameAr = row.length > 1 ? row[1]?.value?.toString().trim() ?? '' : '';
       final nameFr = row.length > 2 ? row[2]?.value?.toString().trim() ?? '' : '';
       final gender = row.length > 3 ? row[3]?.value?.toString().trim() : null;
@@ -108,7 +108,7 @@ class ExcelService {
 
     final dir = await getTemporaryDirectory();
     final sanitizedClassName = className.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-    final filePath = '${dir.path}/Liste_${sanitizedClassName}.xlsx';
+    final filePath = '${dir.path}/Liste_$sanitizedClassName.xlsx';
     final file = File(filePath);
     await file.writeAsBytes(bytes);
 
