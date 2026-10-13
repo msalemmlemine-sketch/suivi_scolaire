@@ -9,10 +9,6 @@ environment:
 # NOTE: versions below were written without access to pub.dev from the authoring
 # sandbox. Run `flutter pub get` and adjust if the resolver complains.
 dependencies:
-  excel: ^4.0.6
-  file_picker: ^8.1.7
-  share_plus: ^10.1.2
-  path_provider: ^2.1.5
   flutter:
     sdk: flutter
   flutter_localizations:
@@ -21,14 +17,13 @@ dependencies:
   sqflite: ^2.3.3
   path: ^1.9.0
   path_provider: ^2.1.3
+  excel: ^4.0.6
+  file_picker: ^8.1.7
+  share_plus: ^10.1.2
   flutter_riverpod: ^2.5.1
   go_router: ^14.0.0
 
 dev_dependencies:
-  excel: ^4.0.6
-  file_picker: ^8.1.7
-  share_plus: ^10.1.2
-  path_provider: ^2.1.5
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
