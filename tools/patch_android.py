@@ -37,3 +37,14 @@ g = g.replace("    buildTypes {", block + "    buildTypes {", 1)
 g = g.replace('signingConfigs.getByName("debug")', 'signingConfigs.getByName("release")', 1)
 gradle.write_text(g, encoding="utf-8")
 print("release signing configured")
+
+
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                compileSdkVersion 36
+            }
+        }
+    }
+}
