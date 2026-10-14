@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../app/strings.dart';
 import '../../app/theme.dart';
+import '../../core/services/excel_service.dart';
 import '../../repositories/student_repository.dart';
 
 class StudentsPage extends StatefulWidget {
@@ -130,6 +131,144 @@ class _StudentsPageState extends State<StudentsPage> {
     original.dispose(); family.dispose(); given.dispose(); arabic.dispose(); matricule.dispose(); birth.dispose(); guardian.dispose(); phone.dispose();
   }
 
+
+  void _snack(String key, [String suffix = '']) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${widget.s.t(key)}$suffix')));
+  }
+
+  Future<Map<String, Object?>?> _pickClass(String titleKey, {String? hintKey}) async {
+    final classes = await _repo.availableClasses();
+    if (!mounted) return null;
+    if (classes.isEmpty) {
+      _snack('student_no_classes');
+      return null;
+    }
+    int selected = classes.first['id'] as int;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialog) => AlertDialog(
+          title: Text(widget.s.t(titleKey)),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              DropdownButtonFormField<int>(
+                value: selected,
+                isExpanded: true,
+                decoration: InputDecoration(labelText: widget.s.t('class')),
+                items: classes.map((c) => DropdownMenuItem<int>(value: c['id'] as int, child: Text(_classLabel(c), maxLines: 2, overflow: TextOverflow.ellipsis))).toList(),
+                onChanged: (v) => setDialog(() => selected = v ?? selected),
+              ),
+              if (hintKey != null) ...[
+                const SizedBox(height: 12),
+                Text(widget.s.t(hintKey), style: Theme.of(dialogContext).textTheme.bodySmall),
+              ],
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(widget.s.t('cancel'))),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(widget.s.t('continue_action'))),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return null;
+    return classes.firstWhere((c) => c['id'] == selected);
+  }
+
+  String? _normGender(String? v) {
+    final x = (v ?? '').trim().toLowerCase();
+    if (x.isEmpty) return null;
+    const male = {'m', 'h', 'ذ', 'ذكر', 'male', 'masculin', 'garçon', 'garcon', 'homme'};
+    const female = {'f', 'أ', 'انثى', 'أنثى', 'female', 'féminin', 'feminin', 'fille', 'femme'};
+    if (male.contains(x)) return 'M';
+    if (female.contains(x)) return 'F';
+    return null;
+  }
+
+  String? _normDate(String? v) {
+    final x = (v ?? '').trim();
+    if (x.length >= 10 && RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(x)) {
+      final d = x.substring(0, 10);
+      final parsed = DateTime.tryParse(d);
+      if (parsed != null && parsed.toIso8601String().substring(0, 10) == d) return d;
+    }
+    final m = RegExp(r'^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$').firstMatch(x);
+    if (m != null) {
+      final d = '${m.group(3)}-${m.group(2)!.padLeft(2, '0')}-${m.group(1)!.padLeft(2, '0')}';
+      final parsed = DateTime.tryParse(d);
+      if (parsed != null && parsed.toIso8601String().substring(0, 10) == d) return d;
+    }
+    return null;
+  }
+
+  Future<void> _importStudents() async {
+    final cls = await _pickClass('import_pick_class', hintKey: 'import_hint');
+    if (cls == null) return;
+    try {
+      final rows = await ExcelService.pickAndParseStudents();
+      if (rows == null) return;
+      if (rows.isEmpty) {
+        _snack('import_empty');
+        return;
+      }
+      var added = 0;
+      var failed = 0;
+      for (final r in rows) {
+        try {
+          await _repo.createAndEnroll(
+            classId: cls['id'] as int,
+            originalName: r.fullNameFr.isNotEmpty ? r.fullNameFr : r.fullNameAr,
+            fullNameAr: r.fullNameAr,
+            matricule: r.nationalId,
+            gender: _normGender(r.gender),
+            birthDate: _normDate(r.birthDate),
+          );
+          added++;
+        } catch (_) {
+          failed++;
+        }
+      }
+      if (!mounted) return;
+      setState(_reload);
+      _snack('import_done', ': $added${failed > 0 ? ' • ${widget.s.t('import_failed_rows')}: $failed' : ''}');
+    } catch (_) {
+      _snack('import_error');
+    }
+  }
+
+  Future<void> _exportClass() async {
+    final cls = await _pickClass('export_pick_class');
+    if (cls == null) return;
+    try {
+      final all = await _repo.activeStudents();
+      final inClass = all.where((r) => r['class_id'] == cls['id']).toList();
+      if (inClass.isEmpty) {
+        _snack('export_empty');
+        return;
+      }
+      final list = inClass.map((r) {
+        final fr = [r['family_name_fr'], r['given_name_fr']].whereType<String>().map((x) => x.trim()).where((x) => x.isNotEmpty).join(' ');
+        final original = (r['full_name_original'] as String?)?.trim() ?? '';
+        return <String, dynamic>{
+          'national_id': r['matricule'],
+          'full_name_ar': r['full_name_ar'],
+          'full_name_original': original.isNotEmpty ? original : fr,
+          'gender': r['gender'],
+          'date_of_birth': r['birth_date'],
+        };
+      }).toList();
+      await ExcelService.exportClassRoster(
+        institutionName: _localized(cls, 'institution_name_ar', 'institution_name_fr'),
+        className: _localized(cls, 'name_ar', 'name_fr'),
+        academicYear: '${cls['year_name']}',
+        studentsList: list,
+      );
+    } catch (_) {
+      _snack('export_error');
+    }
+  }
+
   String _classLabel(Map<String, Object?> row) {
     final inst = _localized(row, 'institution_name_ar', 'institution_name_fr');
     final cls = _localized(row, 'name_ar', 'name_fr');
@@ -155,6 +294,8 @@ class _StudentsPageState extends State<StudentsPage> {
       body: Column(children: [
         Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 8), child: Row(children: [
           Expanded(child: Text(s.t('students_description'), style: Theme.of(context).textTheme.bodyMedium)),
+          IconButton(onPressed: _importStudents, icon: const Icon(Icons.upload_file), tooltip: s.t('import_students')),
+          IconButton(onPressed: _exportClass, icon: const Icon(Icons.ios_share), tooltip: s.t('export_students')),
           IconButton(onPressed: () => setState(() => _showSearch = !_showSearch), icon: const Icon(Icons.search), tooltip: s.t('search')),
           IconButton(onPressed: () => setState(_reload), icon: const Icon(Icons.refresh), tooltip: s.t('refresh')),
         ])),
