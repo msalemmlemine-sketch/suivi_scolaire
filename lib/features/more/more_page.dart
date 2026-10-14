@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import '../../app/strings.dart';
 import '../../app/theme.dart';
+import 'backup_card.dart';
 
 class MorePage extends StatelessWidget {
-  const MorePage({super.key, required this.s, required this.designer, required this.version, required this.onToggleLanguage, required this.onOpenFollowup});
+  const MorePage({super.key, required this.db, required this.s, required this.designer, required this.version, required this.onToggleLanguage, required this.onOpenFollowup});
+  final Database db;
   final S s;
   final String designer, version;
   final VoidCallback onToggleLanguage;
@@ -34,6 +37,8 @@ class MorePage extends StatelessWidget {
           const SizedBox(height: 12),
           SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: onToggleLanguage, icon: const Icon(Icons.swap_horiz), label: Text(s.t('switch_language'), maxLines: 2, textAlign: TextAlign.center))),
         ]))),
+        const SizedBox(height: 12),
+        BackupCard(db: db, s: s),
         const SizedBox(height: 12),
         Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(s.t('about'), style: text.titleMedium), const SizedBox(height: 16),

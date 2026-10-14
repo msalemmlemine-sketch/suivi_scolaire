@@ -37,7 +37,7 @@ class _AppShellState extends State<AppShell> {
           StudentsPage(db: widget.db, s: s),
           TimetablePage(db: widget.db, s: s),
           MorePage(
-            s: s, designer: widget.designer, version: widget.version,
+            db: widget.db, s: s, designer: widget.designer, version: widget.version,
             onToggleLanguage: widget.onToggleLanguage,
             onOpenFollowup: () => Navigator.of(context).push(MaterialPageRoute<void>(
               builder: (_) => Scaffold(appBar: AppBar(title: Text(s.t('followup'))), body: FollowupPage(db: widget.db, s: s)),
