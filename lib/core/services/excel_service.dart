@@ -26,7 +26,10 @@ class ExcelService {
   static Future<List<ExcelStudentRow>?> pickAndParseStudents() async {
     const typeGroup = XTypeGroup(
       label: 'Excel Files',
-      extensions: <String>['xlsx', 'xls'],
+      extensions: <String>['xlsx'],
+      mimeTypes: <String>[
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ],
     );
     final file = await openFile(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
     if (file == null) return null;
