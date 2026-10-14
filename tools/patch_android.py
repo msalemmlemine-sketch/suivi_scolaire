@@ -1,50 +1,44 @@
-"""Post-`flutter create` patch of the generated android/ project.
- - sets the visible app name
- - if android/key.properties exists, signs the release build with it
-Fails loudly when the generated template no longer matches, so a silent
-debug-signed build is never mistaken for a signed one."""
-import pathlib, re, sys
+import os
+import sys
 
-root = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "android")
+def patch_android(android_dir):
+    # 1. ترقيع android/build.gradle.kts أو settings/app
+    app_gradle_kts = os.path.join(android_dir, 'app', 'build.gradle.kts')
+    if os.path.exists(app_gradle_kts):
+        with open(app_gradle_kts, 'r', encoding='utf-8') as f:
+            content = f.read()
+        # رفع compileSdk إلى 36
+        content = content.replace('compileSdk = flutter.compileSdkVersion', 'compileSdk = 36')
+        content = content.replace('compileSdk = 34', 'compileSdk = 36')
+        content = content.replace('compileSdk = 35', 'compileSdk = 36')
+        with open(app_gradle_kts, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print('Patched app/build.gradle.kts compileSdk to 36')
 
-manifest = root / "app/src/main/AndroidManifest.xml"
-m = manifest.read_text(encoding="utf-8")
-m = re.sub(r'android:label="[^"]*"', 'android:label="Suivi Scolaire"', m, count=1)
-manifest.write_text(m, encoding="utf-8")
-
-if not (root / "key.properties").exists():
-    print("no key.properties -> leaving debug signing (unsigned-by-owner build)")
-    sys.exit(0)
-
-gradle = root / "app/build.gradle.kts"
-g = gradle.read_text(encoding="utf-8")
-if 'signingConfigs.getByName("debug")' not in g or "buildTypes {" not in g:
-    sys.exit("ERROR: build.gradle.kts template changed; update tools/patch_android.py")
-
-block = '''    signingConfigs {
-        create("release") {
-            val props = java.util.Properties()
-            props.load(java.io.FileInputStream(rootProject.file("key.properties")))
-            keyAlias = props["keyAlias"] as String
-            keyPassword = props["keyPassword"] as String
-            storeFile = file(props["storeFile"] as String)
-            storePassword = props["storePassword"] as String
-        }
-    }
-
-'''
-g = g.replace("    buildTypes {", block + "    buildTypes {", 1)
-g = g.replace('signingConfigs.getByName("debug")', 'signingConfigs.getByName("release")', 1)
-gradle.write_text(g, encoding="utf-8")
-print("release signing configured")
-
-
+    # 2. ترقيع root build.gradle.kts لدعم compileSdk=36 في المكتبات الفرعية مثل file_picker
+    root_gradle_kts = os.path.join(android_dir, 'build.gradle.kts')
+    if os.path.exists(root_gradle_kts):
+        with open(root_gradle_kts, 'r', encoding='utf-8') as f:
+            content = f.read()
+        subproject_hook = """
 subprojects {
-    afterEvaluate { project ->
-        if (project.hasProperty('android')) {
-            project.android {
-                compileSdkVersion 36
+    afterEvaluate {
+        val project = this
+        if (project.hasProperty("android")) {
+            val androidExt = project.extensions.findByName("android")
+            if (androidExt is com.android.build.gradle.BaseExtension) {
+                androidExt.compileSdkVersion(36)
             }
         }
     }
 }
+"""
+        if "subprojects {" not in content:
+            content += "\n" + subproject_hook
+            with open(root_gradle_kts, 'w', encoding='utf-8') as f:
+                f.write(content)
+            print('Patched root build.gradle.kts for subprojects')
+
+if __name__ == '__main__':
+    target = sys.argv[1] if len(sys.argv) > 1 else 'android'
+    patch_android(target)
