@@ -22,6 +22,14 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _tab = 0;
+  // IndexedStack keeps every tab alive, so a page would keep the data it loaded
+  // at startup. Bumping a tab's generation re-creates it with fresh data.
+  final List<int> _gen = List<int>.filled(5, 0);
+
+  void _openTab(int i) => setState(() {
+        if (i >= 0 && i < 4) _gen[i]++;
+        _tab = i;
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -32,10 +40,10 @@ class _AppShellState extends State<AppShell> {
       body: SafeArea(
         top: false,
         child: IndexedStack(index: _tab, children: [
-          DashboardPage(db: widget.db, s: s, onOpenTab: (i) => setState(() => _tab = i)),
-          InstitutionsPage(db: widget.db, s: s),
-          StudentsPage(db: widget.db, s: s),
-          TimetablePage(db: widget.db, s: s),
+          DashboardPage(key: ValueKey('dash${_gen[0]}'), db: widget.db, s: s, onOpenTab: _openTab),
+          InstitutionsPage(key: ValueKey('inst${_gen[1]}'), db: widget.db, s: s),
+          StudentsPage(key: ValueKey('stud${_gen[2]}'), db: widget.db, s: s),
+          TimetablePage(key: ValueKey('tt${_gen[3]}'), db: widget.db, s: s),
           MorePage(
             db: widget.db, s: s, designer: widget.designer, version: widget.version,
             onToggleLanguage: widget.onToggleLanguage,
@@ -47,7 +55,7 @@ class _AppShellState extends State<AppShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
+        onDestinationSelected: _openTab,
         destinations: [
           NavigationDestination(icon: const Icon(Icons.space_dashboard_outlined), selectedIcon: const Icon(Icons.space_dashboard_rounded), label: s.t('home')),
           NavigationDestination(icon: const Icon(Icons.account_balance_outlined), selectedIcon: const Icon(Icons.account_balance_rounded), label: s.t('institutions')),

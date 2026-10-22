@@ -4,6 +4,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../app/strings.dart';
 import '../../app/theme.dart';
 import '../../core/services/excel_service.dart';
+import '../../repositories/enrollment_repository.dart';
 import '../../repositories/student_repository.dart';
 
 class StudentsPage extends StatefulWidget {
@@ -137,11 +138,11 @@ class _StudentsPageState extends State<StudentsPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${widget.s.t(key)}$suffix')));
   }
 
-  Future<Map<String, Object?>?> _pickClass(String titleKey, {String? hintKey}) async {
-    final classes = await _repo.availableClasses();
+  Future<Map<String, Object?>?> _pickClass(String titleKey, {String? hintKey, List<Map<String, Object?>>? options}) async {
+    final classes = options ?? await _repo.availableClasses();
     if (!mounted) return null;
     if (classes.isEmpty) {
-      _snack('student_no_classes');
+      _snack(options == null ? 'student_no_classes' : 'transfer_no_classes');
       return null;
     }
     int selected = classes.first['id'] as int;
@@ -275,6 +276,112 @@ class _StudentsPageState extends State<StudentsPage> {
     return '$inst — $cls (${row['year_name']})';
   }
 
+  Future<void> _editStudent(Map<String, Object?> row) async {
+    String v(String k) => (row[k] as String?) ?? '';
+    final original = TextEditingController(text: v('full_name_original'));
+    final family = TextEditingController(text: v('family_name_fr'));
+    final given = TextEditingController(text: v('given_name_fr'));
+    final arabic = TextEditingController(text: v('full_name_ar'));
+    final matricule = TextEditingController(text: v('matricule'));
+    final birth = TextEditingController(text: v('birth_date'));
+    final guardian = TextEditingController(text: v('guardian_name'));
+    final phone = TextEditingController(text: v('guardian_phone'));
+    final notes = TextEditingController(text: v('notes'));
+    String? gender = row['gender'] as String?;
+    final ok = await showDialog<bool>(context: context, builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialog) => AlertDialog(
+      title: Text(widget.s.t('student_edit')),
+      content: SizedBox(width: 500, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: original, decoration: InputDecoration(labelText: widget.s.t('student_original_name'))),
+        const SizedBox(height: 10),
+        TextField(controller: family, decoration: InputDecoration(labelText: widget.s.t('family_name_fr'))),
+        const SizedBox(height: 10),
+        TextField(controller: given, decoration: InputDecoration(labelText: widget.s.t('given_name_fr'))),
+        const SizedBox(height: 10),
+        TextField(controller: arabic, decoration: InputDecoration(labelText: widget.s.t('student_name_ar'))),
+        const SizedBox(height: 10),
+        TextField(controller: matricule, decoration: InputDecoration(labelText: widget.s.t('matricule'))),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<String>(
+          value: gender, decoration: InputDecoration(labelText: widget.s.t('gender')),
+          items: [DropdownMenuItem(value: 'M', child: Text(widget.s.t('male'))), DropdownMenuItem(value: 'F', child: Text(widget.s.t('female')))],
+          onChanged: (x) => setDialog(() => gender = x),
+        ),
+        const SizedBox(height: 10),
+        TextField(controller: birth, keyboardType: TextInputType.datetime, decoration: InputDecoration(labelText: widget.s.t('birth_date_hint'))),
+        const SizedBox(height: 10),
+        TextField(controller: guardian, decoration: InputDecoration(labelText: widget.s.t('guardian_name'))),
+        const SizedBox(height: 10),
+        TextField(controller: phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: widget.s.t('guardian_phone'))),
+        const SizedBox(height: 10),
+        TextField(controller: notes, maxLines: 2, decoration: InputDecoration(labelText: widget.s.t('teacher_notes'))),
+      ]))),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(widget.s.t('cancel'))),
+        FilledButton(onPressed: () {
+          if ([original.text, family.text, given.text, arabic.text].every((x) => x.trim().isEmpty)) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.s.t('student_name_required'))));
+            return;
+          }
+          Navigator.pop(dialogContext, true);
+        }, child: Text(widget.s.t('save'))),
+      ],
+    )));
+    if (ok == true) {
+      try {
+        final birthDate = birth.text.trim();
+        if (birthDate.isNotEmpty) {
+          final parsed = DateTime.tryParse(birthDate);
+          if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(birthDate) || parsed == null || parsed.toIso8601String().substring(0, 10) != birthDate) throw const FormatException();
+        }
+        await _repo.updateStudent(
+          row['id'] as int, originalName: original.text, familyNameFr: family.text,
+          givenNameFr: given.text, fullNameAr: arabic.text, matricule: matricule.text,
+          gender: gender, birthDate: birthDate, guardianName: guardian.text, guardianPhone: phone.text, notes: notes.text,
+        );
+        if (mounted) {
+          setState(_reload);
+          _snack('student_updated');
+        }
+      } catch (_) {
+        _snack('student_save_error');
+      }
+    }
+  }
+
+  Future<void> _transferStudent(Map<String, Object?> row) async {
+    final all = await _repo.availableClasses();
+    final targets = all.where((c) => c['year_name'] == row['year_name'] && c['id'] != row['class_id']).toList();
+    final cls = await _pickClass('transfer_pick_class', options: targets);
+    if (cls == null) return;
+    try {
+      await EnrollmentRepository(widget.db).transfer(studentId: row['id'] as int, toClassId: cls['id'] as int);
+      if (mounted) setState(_reload);
+      _snack('student_transferred');
+    } catch (_) {
+      _snack('student_transfer_error');
+    }
+  }
+
+  Future<void> _deleteStudent(Map<String, Object?> row) async {
+    final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
+      icon: const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 36),
+      title: Text(widget.s.t('student_delete')),
+      content: Text('${_studentName(row)}\n\n${widget.s.t('student_delete_confirm')}'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(c, false), child: Text(widget.s.t('cancel'))),
+        FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(c, true), child: Text(widget.s.t('student_delete'))),
+      ],
+    ));
+    if (ok != true) return;
+    try {
+      await _repo.deleteStudentPermanently(row['id'] as int);
+      if (mounted) setState(_reload);
+      _snack('student_deleted');
+    } catch (_) {
+      _snack('student_delete_error');
+    }
+  }
+
   Future<void> _endEnrollment(Map<String, Object?> row) async {
     final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
       title: Text(widget.s.t('student_end_enrollment')),
@@ -327,7 +434,22 @@ class _StudentsPageState extends State<StudentsPage> {
                   Text('$inst • $cls'), Text('${s.t('academic_year')}: ${row['year_name']}'),
                   if (phone.isNotEmpty) Text('${s.t('guardian_phone')}: $phone'),
                 ])),
-                trailing: PopupMenuButton<String>(onSelected: (_) => _endEnrollment(row), itemBuilder: (_) => [PopupMenuItem(value: 'end', child: Text(s.t('student_end_enrollment')))]),
+                trailing: PopupMenuButton<String>(onSelected: (a) {
+                  if (a == 'edit') {
+                    _editStudent(row);
+                  } else if (a == 'transfer') {
+                    _transferStudent(row);
+                  } else if (a == 'delete') {
+                    _deleteStudent(row);
+                  } else {
+                    _endEnrollment(row);
+                  }
+                }, itemBuilder: (_) => [
+                  PopupMenuItem(value: 'edit', child: Text(s.t('student_edit'))),
+                  PopupMenuItem(value: 'transfer', child: Text(s.t('student_transfer'))),
+                  PopupMenuItem(value: 'end', child: Text(s.t('student_end_enrollment'))),
+                  PopupMenuItem(value: 'delete', child: Text(s.t('student_delete'), style: const TextStyle(color: Colors.red))),
+                ]),
                 isThreeLine: true,
               ));
             },

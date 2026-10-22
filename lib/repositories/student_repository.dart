@@ -77,6 +77,56 @@ class StudentRepository {
     });
   }
 
+  Future<void> updateStudent(
+    int studentId, {
+    required String originalName,
+    String? familyNameFr,
+    String? givenNameFr,
+    String? fullNameAr,
+    String? gender,
+    String? birthDate,
+    String? guardianName,
+    String? guardianPhone,
+    String? matricule,
+    String? notes,
+  }) async {
+    if ([originalName, familyNameFr, givenNameFr, fullNameAr].every((x) => (x ?? '').trim().isEmpty)) {
+      throw ArgumentError('student_name_required');
+    }
+    final n = await _db.update('students', {
+      'matricule': _clean(matricule),
+      'family_name_fr': _clean(familyNameFr),
+      'given_name_fr': _clean(givenNameFr),
+      'full_name_ar': _clean(fullNameAr),
+      'full_name_original': _clean(originalName),
+      'gender': gender,
+      'birth_date': _clean(birthDate),
+      'guardian_name': _clean(guardianName),
+      'guardian_phone': _clean(guardianPhone),
+      'notes': _clean(notes),
+    }, where: 'id = ?', whereArgs: [studentId]);
+    if (n == 0) throw StateError('student_not_found');
+  }
+
+  /// Permanently removes a student and everything attached to them
+  /// (enrollments, attendance, behaviour records, marks and mark history),
+  /// all in one transaction. Nothing is removed if any step fails.
+  Future<void> deleteStudentPermanently(int studentId) async {
+    await _db.transaction((txn) async {
+      const mine = 'SELECT id FROM enrollments WHERE student_id = ?';
+      final a = [studentId];
+      await txn.rawDelete(
+          'DELETE FROM assessment_result_history WHERE result_id IN '
+          '(SELECT id FROM assessment_results WHERE enrollment_id IN ($mine))', a);
+      await txn.rawDelete('DELETE FROM assessment_results WHERE enrollment_id IN ($mine)', a);
+      await txn.rawDelete('DELETE FROM attendance_records WHERE enrollment_id IN ($mine)', a);
+      await txn.rawDelete('DELETE FROM behavior_records WHERE enrollment_id IN ($mine)', a);
+      await txn.delete('enrollments', where: 'student_id = ?', whereArgs: a);
+      final n = await txn.delete('students', where: 'id = ?', whereArgs: a);
+      if (n == 0) throw StateError('student_not_found');
+    });
+  }
+
   Future<void> endEnrollment(int enrollmentId) async {
     await _db.update('enrollments', {
       'status': 'ended',

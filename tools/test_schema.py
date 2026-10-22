@@ -169,6 +169,33 @@ def _():
 def _():
     db=new_db(); n="رامتلاي  باباكر  انجوك"; x(db,"INSERT INTO students(full_name_ar,full_name_original) VALUES(?,?)",n,n)
     assert db.execute("SELECT full_name_ar FROM students").fetchone()[0]==n
+@check("permanent student delete removes all dependent rows and keeps other students")
+def _():
+    db,i1,i2,y1,y2,c,s=base(); m=x(db,"INSERT INTO subjects(name_fr) VALUES('SVT')")
+    other=x(db,"INSERT INTO students(full_name_original) VALUES('Autre Eleve')")
+    e=enroll(db,s,i1,y1,c['a1']); eo=enroll(db,other,i1,y1,c['a1'])
+    ss=session(db,i1,y1,c['a1'],m)
+    x(db,"INSERT INTO attendance_records(lesson_session_id,enrollment_id,class_id,status_code) VALUES(?,?,?, 'present')",ss,e,c['a1'])
+    x(db,"INSERT INTO attendance_records(lesson_session_id,enrollment_id,class_id,status_code) VALUES(?,?,?, 'present')",ss,eo,c['a1'])
+    cat=db.execute("SELECT id FROM behavior_categories LIMIT 1").fetchone()[0]
+    x(db,"INSERT INTO behavior_records(enrollment_id,category_id,record_date) VALUES(?,?,'2025-11-03')",e,cat)
+    a=assess(db,i1,y1,c['a1'],m)
+    r=x(db,"INSERT INTO assessment_results(assessment_id,enrollment_id,class_id,status,score) VALUES(?,?,?, 'graded', 10)",a,e,c['a1'])
+    x(db,"INSERT INTO assessment_results(assessment_id,enrollment_id,class_id,status,score) VALUES(?,?,?, 'graded', 12)",a,eo,c['a1'])
+    db.execute("UPDATE assessment_results SET score=11 WHERE id=?",(r,))   # creates history row
+    assert db.execute("SELECT COUNT(*) FROM assessment_result_history").fetchone()[0]==1
+    mine="SELECT id FROM enrollments WHERE student_id = ?"
+    db.execute("BEGIN")
+    db.execute(f"DELETE FROM assessment_result_history WHERE result_id IN (SELECT id FROM assessment_results WHERE enrollment_id IN ({mine}))",(s,))
+    db.execute(f"DELETE FROM assessment_results WHERE enrollment_id IN ({mine})",(s,))
+    db.execute(f"DELETE FROM attendance_records WHERE enrollment_id IN ({mine})",(s,))
+    db.execute(f"DELETE FROM behavior_records WHERE enrollment_id IN ({mine})",(s,))
+    db.execute("DELETE FROM enrollments WHERE student_id=?",(s,))
+    db.execute("DELETE FROM students WHERE id=?",(s,))
+    db.execute("COMMIT")
+    q=lambda t:db.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+    assert (q('students'),q('enrollments'),q('attendance_records'),q('behavior_records'),q('assessment_results'),q('assessment_result_history'))==(1,1,1,0,1,0)
+    assert db.execute("PRAGMA foreign_key_check").fetchall()==[]
 @check("PRAGMA foreign_key_check clean on populated db")
 def _():
     db,i1,i2,y1,y2,c,s=base(); enroll(db,s,i1,y1,c['a1']); assert db.execute("PRAGMA foreign_key_check").fetchall()==[]

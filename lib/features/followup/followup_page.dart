@@ -80,8 +80,21 @@ class _FollowupPageState extends State<FollowupPage> with SingleTickerProviderSt
     });
   }
 
+  Future<bool> _askNewSubject() async {
+    final ar=TextEditingController();final fr=TextEditingController();
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:Text(widget.s.t('subject')),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      Text(widget.s.t('subject_create_hint')),const SizedBox(height:12),
+      TextField(controller:fr,decoration:InputDecoration(labelText:widget.s.t('subject_name_fr'))),const SizedBox(height:10),
+      TextField(controller:ar,decoration:InputDecoration(labelText:widget.s.t('subject_name_ar'))),
+    ])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:Text(widget.s.t('cancel'))),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:Text(widget.s.t('save')))]));
+    if(ok!=true)return false;
+    try{await _repo.addSubject(nameAr:ar.text,nameFr:fr.text);return true;}
+    catch(_){_toast(widget.s.t('followup_save_error'));return false;}
+  }
+
   Future<void> _addAssessment() async {
-    final subjects=await _repo.subjects();final types=await _repo.assessmentTypes();if(!mounted)return;if(subjects.isEmpty||types.isEmpty){_toast(widget.s.t('assessment_needs_subjects'));return;}
+    var subjects=await _repo.subjects();final types=await _repo.assessmentTypes();if(!mounted)return;if(types.isEmpty){_toast(widget.s.t('assessment_needs_subjects'));return;}
+    if(subjects.isEmpty){final created=await _askNewSubject();if(!created||!mounted)return;subjects=await _repo.subjects();if(subjects.isEmpty)return;}
     int subjectId=subjects.first['id'] as int;int typeId=types.first['id'] as int;final title=TextEditingController();final date=TextEditingController(text:DateTime.now().toIso8601String().substring(0,10));final max=TextEditingController(text:'20');final coefficient=TextEditingController(text:'1');final period=TextEditingController();final description=TextEditingController();
     final ok=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,setDialog)=>AlertDialog(title:Text(widget.s.t('assessment_add')),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,spacing:12,children:[
       DropdownButtonFormField<int>(value:subjectId,isExpanded:true,decoration:InputDecoration(labelText:widget.s.t('subject')),items:subjects.map((r)=>DropdownMenuItem(value:r['id'] as int,child:Text(_name(r,'name_ar','name_fr'),overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setDialog(()=>subjectId=v);}),

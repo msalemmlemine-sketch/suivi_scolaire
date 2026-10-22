@@ -46,6 +46,13 @@ class FollowupRepository {
     });
   }
 
+  Future<int> addSubject({String? nameAr, String? nameFr}) async {
+    final ar = (nameAr ?? '').trim();
+    final fr = (nameFr ?? '').trim();
+    if (ar.isEmpty && fr.isEmpty) throw ArgumentError('subject_name_required');
+    return _db.insert('subjects', {'name_ar': ar.isEmpty ? null : ar, 'name_fr': fr.isEmpty ? null : fr});
+  }
+
   Future<List<Map<String, Object?>>> subjects() => _db.query('subjects', orderBy: "COALESCE(NULLIF(name_fr,''),name_ar)");
   Future<List<Map<String, Object?>>> assessmentTypes() => _db.query('assessment_types', where: 'is_active=1', orderBy: 'id');
 
